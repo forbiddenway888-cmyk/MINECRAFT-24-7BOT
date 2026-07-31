@@ -165,20 +165,33 @@ async function fidgetInventory() {
         console.log(`[+] Successfully authenticated as ${bot.username}`);
     });
 
+    // -------------------------------------------------------------
+    // Spawn Event (WITH GRACE PERIOD FIX)
+    // -------------------------------------------------------------
+    let emergencyLogoutEnabled = false; // Flag to prevent infinite join/leave loops
+
     bot.on('spawn', () => {
         console.log('[+] Bot spawned into the world. Activating stealth engine...');
         
-        // --- ADD THIS BLOCK ---
         const defaultMove = new Movements(bot);
-        defaultMove.canDig = false; // Prevents the bot from breaking blocks to move
-        defaultMove.allow1by1towers = false; // Stops it from building dirt pillars
+        defaultMove.canDig = false; 
+        defaultMove.allow1by1towers = false; 
         bot.pathfinder.setMovements(defaultMove);
-        // ----------------------
+
+        // --- THE FIX: 15 Second Grace Period ---
+        emergencyLogoutEnabled = false;
+        console.log('[SYS] Spawn grace period active. Bot will not emergency-logout for 15 seconds so it can eat/heal.');
+        
+        setTimeout(() => {
+            emergencyLogoutEnabled = true;
+            console.log('[SYS] Grace period ended. Emergency logout is now armed.');
+        }, 15000); 
 
         scheduleNextStealthAction();
     });
+
     // -------------------------------------------------------------
-    // Step 3: Emergency Survival & Auto-Eat Protocol
+    // Step 3: Emergency Survival & Auto-Eat Protocol (UPDATED)
     // -------------------------------------------------------------
     bot.on('health', async () => {
         // 1. Auto-Eat when hunger drops below 16 (8 food bars)
@@ -203,10 +216,14 @@ async function fidgetInventory() {
             }
         }
 
-        // 2. Emergency Disconnect if taking lethal damage (<= 3 hearts)
+        // 2. Emergency Disconnect (NOW PROTECTED BY GRACE PERIOD)
         if (bot.health <= 6 && bot.health > 0) {
-            console.log('[!] CRITICAL DAMAGE DETECTED! Emergency logging out to prevent death...');
-            bot.quit('Emergency Logout: Critical Health');
+            if (emergencyLogoutEnabled) {
+                console.log('[!] CRITICAL DAMAGE DETECTED! Emergency logging out to prevent death...');
+                bot.quit('Emergency Logout: Critical Health');
+            } else {
+                console.log('[!] Health is low, but staying online to attempt eating/healing (Grace Period active).');
+            }
         }
     });
 
