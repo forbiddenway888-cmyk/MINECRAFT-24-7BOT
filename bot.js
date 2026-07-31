@@ -1,5 +1,7 @@
 const express = require('express');
 const mineflayer = require('mineflayer');
+const { pathfinder, Movements, goals } = require('mineflayer-pathfinder'); // <-- Add this line
+
 
 // Configuration loaded from Environment Variables or directly set as fallbacks
 const SERVER_IP = process.env.SERVER_IP || 'mafia_empire2026.aternos.me';
@@ -42,61 +44,115 @@ function initBot() {
         host: SERVER_IP,
         port: SERVER_PORT,
         username: BOT_USERNAME,
-        version: '1.21.1', // <--- EXPLICITLY SET YOUR VERSION HERE
-        // CRITICAL MEMORY & BANDWIDTH SAVINGS:
-        physicsEnabled: false, // Disables local physics engine calculation
-        viewDistance: 'tiny'   // Minimizes world chunk caching
+        version: '1.21.1', // <--- Ensure this matches your Aternos server version
+        // Keep viewDistance tiny to save RAM on Render (512MB limit)
+        viewDistance: 'tiny'
+        // NOTE: physicsEnabled was removed so the pathfinder can actually walk
     });
 
+    // Inject the pathfinding brain
+    bot.loadPlugin(pathfinder);
+
     // -------------------------------------------------------------
-// God-Tier Human Emulation Engine
+// Natural Pathfinding Module
 // -------------------------------------------------------------
-function scheduleNextStealthAction() {
+function performRandomWander() {
+    if (!bot || !bot.entity || !bot.pathfinder) return;
+
+    // Get the bot's current exact location
+    const pos = bot.entity.position;
+
+    // Calculate a random X and Z coordinate within a 5-block radius
+    const randomX = pos.x + (Math.random() * 10 - 5);
+    const randomZ = pos.z + (Math.random() * 10 - 5);
+    
+    // Create the destination goal (Get within 1 block of the random X/Z)
+    const goal = new goals.GoalNear(randomX, pos.y, randomZ, 1);
+    
+    console.log(`[+] Stealth: Wandering to new coordinates...`);
+    bot.pathfinder.setGoal(goal);
+}
+
+    // -------------------------------------------------------------
+// Simulated Inventory Fidgeting
+// -------------------------------------------------------------
+async function fidgetInventory() {
+    if (!bot || !bot.inventory) return;
+
+    try {
+        const items = bot.inventory.items();
+        
+        // If the bot has at least 2 items in its inventory, pretend to swap them
+        if (items.length >= 2) {
+            const slotA = items[0].slot;
+            const slotB = items[1].slot;
+            
+            // Simulates physically clicking items in the inventory GUI
+            await bot.clickWindow(slotA, 0, 0);
+            await bot.clickWindow(slotB, 0, 0);
+            await bot.clickWindow(slotA, 0, 0);
+            
+            console.log('[+] Stealth: Fidgeting with inventory items.');
+        }
+    } catch (err) {
+        // Silently ignore if the server cancels the inventory click
+    }
+}
+
+    function scheduleNextStealthAction() {
     if (!bot || !bot.entity) return;
 
-    // Pick a random human action weight (0.0 to 1.0)
     const actionRoll = Math.random();
 
-    if (actionRoll < 0.35) {
-        // 1. Human-like Head Turn (Stepped interpolation)
+    // 1. 10% chance to open inventory and move items
+    if (actionRoll < 0.10) {
+        fidgetInventory();
+
+    // 2. 20% chance to physically walk somewhere new (shifted from 0.20 to 0.30)
+    } else if (actionRoll < 0.30) {
+        performRandomWander();
+
+    // 3. Human-like Head Turn (shifted to 0.50)
+    } else if (actionRoll < 0.50) {
         const targetYaw = (Math.random() * Math.PI * 2) - Math.PI;
         const targetPitch = (Math.random() * Math.PI / 3) - (Math.PI / 6);
-        bot.look(targetYaw, targetPitch, false); // false = smooth turn, not snap
+        bot.look(targetYaw, targetPitch, false);
 
-    } else if (actionRoll < 0.55) {
-        // 2. Fidget Hotbar Slot
+    // 4. Fidget Hotbar Slot
+    } else if (actionRoll < 0.65) {
         const randomSlot = Math.floor(Math.random() * 9);
         bot.setQuickBarSlot(randomSlot);
 
-    } else if (actionRoll < 0.70) {
-        // 3. Air Punch / Arm Swing
+    // 5. Air Punch / Arm Swing
+    } else if (actionRoll < 0.80) {
         bot.swingArm('mainhand');
 
-    } else if (actionRoll < 0.85) {
-        // 4. Crouch/Uncrouch Fidget
+    // 6. Crouch Fidget
+    } else if (actionRoll < 0.90) {
         bot.setControlState('sneak', true);
         setTimeout(() => {
             if (bot) bot.setControlState('sneak', false);
         }, getGaussianRandom(600, 200));
 
+    // 7. Micro-Movement Pulse
     } else {
-        // 5. Micro-Movement Pulse (W/A/S/D tap)
         const directions = ['forward', 'back', 'left', 'right'];
         const chosenDir = directions[Math.floor(Math.random() * directions.length)];
         
         bot.setControlState(chosenDir, true);
         setTimeout(() => {
             if (bot) bot.setControlState(chosenDir, false);
-        }, getGaussianRandom(250, 80)); // 250ms tap mimics key press
+        }, getGaussianRandom(250, 80));
     }
 
-    // Bell-curve distribution delay between actions (15s avg, 5s std dev)
+    // *** YOU HAD A SECOND "else" BLOCK RIGHT HERE. DELETE IT! ***
+
+    // Timer until next action
     let nextDelay = getGaussianRandom(15000, 5000);
-    if (nextDelay < 5000) nextDelay = 5000; // Hard clamp minimum
+    if (nextDelay < 5000) nextDelay = 5000;
 
     setTimeout(scheduleNextStealthAction, nextDelay);
 }
-
     // -------------------------------------------------------------
     // 5. Event Handlers & Auto-Reconnection Protocol
     // -------------------------------------------------------------
@@ -106,8 +162,54 @@ function scheduleNextStealthAction() {
 
     bot.on('spawn', () => {
         console.log('[+] Bot spawned into the world. Activating stealth engine...');
-        // Delay initial action slightly to allow world packet settlement
-        setTimeout(scheduleNextStealthAction, 5000);
+        
+        // --- ADD THIS BLOCK ---
+        const defaultMove = new Movements(bot);
+        defaultMove.canDig = false; // Prevents the bot from breaking blocks to move
+        defaultMove.allow1by1towers = false; // Stops it from building dirt pillars
+        bot.pathfinder.setMovements(defaultMove);
+        // ----------------------
+
+        scheduleNextStealthAction();
+    });
+    // -------------------------------------------------------------
+    // Step 3: Emergency Survival & Auto-Eat Protocol
+    // -------------------------------------------------------------
+    bot.on('health', async () => {
+        // 1. Auto-Eat when hunger drops below 16 (8 food bars)
+        if (bot.food < 16 && (!bot.pathfinder || !bot.pathfinder.isMoving())) {
+            const food = bot.inventory.items().find(item => 
+                item.name.includes('cooked') || 
+                item.name === 'bread' || 
+                item.name === 'apple' ||
+                item.name === 'steak' ||
+                item.name === 'porkchop'
+            );
+
+            if (food) {
+                try {
+                    console.log(`[+] Health Low/Hungry: Attempting to eat ${food.name}...`);
+                    await bot.equip(food, 'hand');
+                    await bot.consume();
+                    console.log('[+] Bot ate food successfully.');
+                } catch (err) {
+                    // Silently ignore if eating action was interrupted
+                }
+            }
+        }
+
+        // 2. Emergency Disconnect if taking lethal damage (<= 3 hearts)
+        if (bot.health <= 6 && bot.health > 0) {
+            console.log('[!] CRITICAL DAMAGE DETECTED! Emergency logging out to prevent death...');
+            bot.quit('Emergency Logout: Critical Health');
+        }
+    });
+
+    // 3. Auto-Respawn Backup (If the bot dies before it can disconnect)
+    bot.on('death', () => {
+        console.log('[!] Bot died in combat/environment. Respawning...');
+        // Respawn packet is handled automatically by Mineflayer, swing arm to trigger world reload
+        bot.swingArm('mainhand');
     });
 
     // -------------------------------------------------------------
