@@ -49,30 +49,53 @@ function initBot() {
     });
 
     // -------------------------------------------------------------
-    // 4. Human-Behavior Stealth Engine
-    // -------------------------------------------------------------
-    function scheduleNextStealthAction() {
-        if (!bot || !bot.entity) return;
+// God-Tier Human Emulation Engine
+// -------------------------------------------------------------
+function scheduleNextStealthAction() {
+    if (!bot || !bot.entity) return;
 
-        // Randomize looking angles
-        const yaw = (Math.random() * Math.PI * 2) - Math.PI; // -PI to PI
-        const pitch = (Math.random() * Math.PI / 2) - (Math.PI / 4); // -PI/4 to PI/4
+    // Pick a random human action weight (0.0 to 1.0)
+    const actionRoll = Math.random();
 
-        bot.look(yaw, pitch, true, () => {
-            // Optional micro-jump with random probability
-            if (Math.random() < 0.15) {
-                bot.setControlState('jump', true);
-                setTimeout(() => bot.setControlState('jump', false), 150);
-            }
-        });
+    if (actionRoll < 0.35) {
+        // 1. Human-like Head Turn (Stepped interpolation)
+        const targetYaw = (Math.random() * Math.PI * 2) - Math.PI;
+        const targetPitch = (Math.random() * Math.PI / 3) - (Math.PI / 6);
+        bot.look(targetYaw, targetPitch, false); // false = smooth turn, not snap
 
-        // Calculate next action delay using Gaussian curve
-        // Mean = 25 seconds, Standard Dev = 8 seconds, Minimum clamp = 8 seconds
-        let nextDelay = getGaussianRandom(25000, 8000);
-        if (nextDelay < 8000) nextDelay = 8000;
+    } else if (actionRoll < 0.55) {
+        // 2. Fidget Hotbar Slot
+        const randomSlot = Math.floor(Math.random() * 9);
+        bot.setQuickBarSlot(randomSlot);
 
-        setTimeout(scheduleNextStealthAction, nextDelay);
+    } else if (actionRoll < 0.70) {
+        // 3. Air Punch / Arm Swing
+        bot.swingArm('mainhand');
+
+    } else if (actionRoll < 0.85) {
+        // 4. Crouch/Uncrouch Fidget
+        bot.setControlState('sneak', true);
+        setTimeout(() => {
+            if (bot) bot.setControlState('sneak', false);
+        }, getGaussianRandom(600, 200));
+
+    } else {
+        // 5. Micro-Movement Pulse (W/A/S/D tap)
+        const directions = ['forward', 'back', 'left', 'right'];
+        const chosenDir = directions[Math.floor(Math.random() * directions.length)];
+        
+        bot.setControlState(chosenDir, true);
+        setTimeout(() => {
+            if (bot) bot.setControlState(chosenDir, false);
+        }, getGaussianRandom(250, 80)); // 250ms tap mimics key press
     }
+
+    // Bell-curve distribution delay between actions (15s avg, 5s std dev)
+    let nextDelay = getGaussianRandom(15000, 5000);
+    if (nextDelay < 5000) nextDelay = 5000; // Hard clamp minimum
+
+    setTimeout(scheduleNextStealthAction, nextDelay);
+}
 
     // -------------------------------------------------------------
     // 5. Event Handlers & Auto-Reconnection Protocol
@@ -121,7 +144,60 @@ function initBot() {
         console.log(`[-] Connection terminated. Scheduling reconnect in ${(reconnectDelay / 1000).toFixed(1)}s...`);
         setTimeout(initBot, reconnectDelay);
     });
+
+    // -------------------------------------------------------------
+    // Humanized Conversational Chat Engine
+    // -------------------------------------------------------------
+    bot.on('chat', (username, message) => {
+        // Ignore our own messages to prevent infinite loops
+        if (username === bot.username) return;
+
+        const msgLower = message.toLowerCase();
+
+        // 1. Check if the message is directed at the bot
+        // (Using a generic list of triggers so it responds naturally)
+        if (msgLower.includes(bot.username.toLowerCase()) || msgLower.includes('bot') || msgLower.includes('hello')) {
+            
+            // 2. Chance to ignore the message (humans get distracted)
+            if (Math.random() < 0.25) { 
+                console.log(`[CHAT] Ignored message from ${username}`);
+                return;
+            }
+
+            // 3. Select a natural, slightly flawed response
+            const responses = [
+                'yeah?',
+                'sup',
+                'im here',
+                'lagging a bit tbh',
+                'what',
+                'busy atm',
+                'brb actually',
+                'yo',
+                'who pinged me',
+                'give me a sec'
+            ];
+            
+            const chosenResponse = responses[Math.floor(Math.random() * responses.length)];
+
+            // 4. Calculate a realistic typing delay
+            // Humans type around 5 chars per second (~200ms per character), plus reaction time
+            const typingTime = (chosenResponse.length * 200);
+            const reactionTime = getGaussianRandom(1500, 500); 
+            const totalDelay = typingTime + reactionTime;
+
+            console.log(`[CHAT] Preparing to reply to ${username} in ${(totalDelay/1000).toFixed(1)}s`);
+
+            // 5. Send the message after the calculated delay
+            setTimeout(() => {
+                bot.chat(chosenResponse);
+            }, totalDelay);
+        }
+    });
+    
 }
+
+
 
 // Start the bot sequence
 initBot();
