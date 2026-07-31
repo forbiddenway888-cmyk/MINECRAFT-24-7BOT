@@ -1,1 +1,15 @@
 
+services:
+  - type: web
+    name: stealth-aternos-bot
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: SERVER_IP
+        value: YOUR_ATERNOS_IP_HERE
+      - key: SERVER_PORT
+        value: '25565'
+      - key: BOT_USERNAME
+        value: StealthBot_01
