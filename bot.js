@@ -87,6 +87,26 @@ function initBot() {
         setTimeout(scheduleNextStealthAction, 5000);
     });
 
+    // -------------------------------------------------------------
+    // Auto-Login Handler for Auth Plugins / Cracked Servers
+    // -------------------------------------------------------------
+    bot.on('message', (message) => {
+        const text = message.toString().toLowerCase();
+        
+        // If the server asks to register (first time joining)
+        if (text.includes('/register')) {
+            console.log('[!] Server requested registration. Sending password...');
+            bot.chat('/register YourSecretPassword123 YourSecretPassword123'); 
+        }
+        
+        // If the server asks to login (subsequent joins)
+        if (text.includes('/login')) {
+            console.log('[!] Server requested login. Sending password...');
+            bot.chat('/login YourSecretPassword123'); 
+        }
+    });
+    
+
     bot.on('error', (err) => {
         console.error(`[-] Protocol/Network Error: ${err.message}`);
     });
