@@ -1,10 +1,18 @@
 const express = require('express');
 const mineflayer = require('mineflayer');
-const { pathfinder, Movements, goals } = require('mineflayer-pathfinder'); // <-- Add this line
+const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
 
+// -------------------------------------------------------------
+// SILENCE ALL LOGS TO SAVE RENDER CPU/MEMORY
+// -------------------------------------------------------------
+console.log = function() {};
+console.error = function() {};
+console.warn = function() {};
+console.info = function() {};
 
 // Configuration loaded from Environment Variables or directly set as fallbacks
 const SERVER_IP = process.env.SERVER_IP || 'mafia_empire2026.aternos.me';
+// ... rest of your code ...
 const SERVER_PORT = parseInt(process.env.SERVER_PORT || '41899', 10);
 const BOT_USERNAME = process.env.BOT_USERNAME || 'StealthBot_01';
 
