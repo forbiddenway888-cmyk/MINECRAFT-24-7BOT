@@ -52,10 +52,9 @@ function initBot() {
         host: SERVER_IP,
         port: SERVER_PORT,
         username: BOT_USERNAME,
-        version: '1.21.1', // <--- Ensure this matches your Aternos server version
-        // Keep viewDistance tiny to save RAM on Render (512MB limit)
-        viewDistance: 'tiny'
-        // NOTE: physicsEnabled was removed so the pathfinder can actually walk
+        version: '1.21.1',
+        viewDistance: 2,         // Force minimum chunk radius (2 chunks = lowest bandwidth)
+        hideErrors: true         // Prevents processing redundant protocol error strings
     });
 
     // Inject the pathfinding brain
