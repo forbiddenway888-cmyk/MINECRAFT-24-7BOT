@@ -100,59 +100,64 @@ async function fidgetInventory() {
 }
 
     function scheduleNextStealthAction() {
-    if (!bot || !bot.entity) return;
+        if (!bot || !bot.entity) return;
 
-    const actionRoll = Math.random();
+        const actionRoll = Math.random();
 
-    // 1. 10% chance to open inventory and move items
-    if (actionRoll < 0.10) {
-        fidgetInventory();
+        // 1. 10% chance to open inventory and move items
+        if (actionRoll < 0.10) {
+            fidgetInventory();
 
-    // 2. 20% chance to physically walk somewhere new (shifted from 0.20 to 0.30)
-    } else if (actionRoll < 0.30) {
-        performRandomWander();
+        // 2. 40% chance to physically walk somewhere new (Increased from 30% to 40%)
+        } else if (actionRoll < 0.50) {
+            performRandomWander();
 
-    // 3. Human-like Head Turn (shifted to 0.50)
-    } else if (actionRoll < 0.50) {
-        const targetYaw = (Math.random() * Math.PI * 2) - Math.PI;
-        const targetPitch = (Math.random() * Math.PI / 3) - (Math.PI / 6);
-        bot.look(targetYaw, targetPitch, false);
+        // 3. Human-like Head Turn
+        } else if (actionRoll < 0.60) {
+            const targetYaw = (Math.random() * Math.PI * 2) - Math.PI;
+            const targetPitch = (Math.random() * Math.PI / 3) - (Math.PI / 6);
+            bot.look(targetYaw, targetPitch, false);
 
-    // 4. Fidget Hotbar Slot
-    } else if (actionRoll < 0.65) {
-        const randomSlot = Math.floor(Math.random() * 9);
-        bot.setQuickBarSlot(randomSlot);
+        // 4. Fidget Hotbar Slot & JUMP (Added jumping to prove we are human)
+        } else if (actionRoll < 0.70) {
+            const randomSlot = Math.floor(Math.random() * 9);
+            bot.setQuickBarSlot(randomSlot);
+            bot.setControlState('jump', true);
+            setTimeout(() => { if (bot) bot.setControlState('jump', false); }, 500);
 
-    // 5. Air Punch / Arm Swing
-    } else if (actionRoll < 0.80) {
-        bot.swingArm('mainhand');
+        // 5. Air Punch / Arm Swing
+        } else if (actionRoll < 0.85) {
+            bot.swingArm('mainhand');
 
-    // 6. Crouch Fidget
-    } else if (actionRoll < 0.90) {
-        bot.setControlState('sneak', true);
-        setTimeout(() => {
-            if (bot) bot.setControlState('sneak', false);
-        }, getGaussianRandom(600, 200));
+        // 6. Crouch Fidget
+        } else if (actionRoll < 0.90) {
+            bot.setControlState('sneak', true);
+            setTimeout(() => {
+                if (bot) bot.setControlState('sneak', false);
+            }, getGaussianRandom(600, 200));
 
-    // 7. Micro-Movement Pulse
-    } else {
-        const directions = ['forward', 'back', 'left', 'right'];
-        const chosenDir = directions[Math.floor(Math.random() * directions.length)];
-        
-        bot.setControlState(chosenDir, true);
-        setTimeout(() => {
-            if (bot) bot.setControlState(chosenDir, false);
-        }, getGaussianRandom(250, 80));
+        // 7. Micro-Movement Pulse (Now with 50% chance to jump while moving)
+        } else {
+            const directions = ['forward', 'back', 'left', 'right'];
+            const chosenDir = directions[Math.floor(Math.random() * directions.length)];
+            
+            bot.setControlState(chosenDir, true);
+            if (Math.random() > 0.5) bot.setControlState('jump', true); 
+
+            setTimeout(() => {
+                if (bot) {
+                    bot.setControlState(chosenDir, false);
+                    bot.setControlState('jump', false);
+                }
+            }, getGaussianRandom(400, 100)); // Moves for longer bursts now
+        }
+
+        // TIMER FIX: Bot will now act every 3 to 8 seconds (much faster!)
+        let nextDelay = getGaussianRandom(5000, 2000);
+        if (nextDelay < 3000) nextDelay = 3000;
+
+        setTimeout(scheduleNextStealthAction, nextDelay);
     }
-
-    // *** YOU HAD A SECOND "else" BLOCK RIGHT HERE. DELETE IT! ***
-
-    // Timer until next action
-    let nextDelay = getGaussianRandom(15000, 5000);
-    if (nextDelay < 5000) nextDelay = 5000;
-
-    setTimeout(scheduleNextStealthAction, nextDelay);
-}
     // -------------------------------------------------------------
     // 5. Event Handlers & Auto-Reconnection Protocol
     // -------------------------------------------------------------
