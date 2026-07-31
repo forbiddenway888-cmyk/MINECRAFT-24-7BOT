@@ -42,7 +42,7 @@ function initBot() {
         host: SERVER_IP,
         port: SERVER_PORT,
         username: BOT_USERNAME,
-        version: false, // Auto-detect protocol version
+        version: '1.21.1', // <--- EXPLICITLY SET YOUR VERSION HERE
         // CRITICAL MEMORY & BANDWIDTH SAVINGS:
         physicsEnabled: false, // Disables local physics engine calculation
         viewDistance: 'tiny'   // Minimizes world chunk caching
