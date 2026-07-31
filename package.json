@@ -1,1 +1,17 @@
 
+{
+  "name": "stealth-node-bot",
+  "version": "1.0.0",
+  "description": "Optimized Node.js keep-alive bot",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mineflayer": "^4.19.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
