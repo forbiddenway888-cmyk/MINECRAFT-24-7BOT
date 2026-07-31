@@ -1,4 +1,3 @@
-
 services:
   - type: web
     name: stealth-aternos-bot
@@ -8,8 +7,8 @@ services:
     startCommand: npm start
     envVars:
       - key: SERVER_IP
-        value: mafia_empire2026.aternos.me
+        value: halfbeak.aternos.host
       - key: SERVER_PORT
-        value: '25565'
+        value: '41899'
       - key: BOT_USERNAME
         value: StealthBot_01
