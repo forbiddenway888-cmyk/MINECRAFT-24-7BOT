@@ -199,22 +199,22 @@ async function fidgetInventory() {
         bot.pathfinder.setMovements(defaultMove);
 
 // -------------------------------------------------------------
-    // TACTICAL MEMORY WATCHDOG
+    // TACTICAL MEMORY WATCHDOG (FIXED)
     // -------------------------------------------------------------
-    memoryWatchdog = setInterval(() => { // <--- Removed "const" here
-        // .rss = Resident Set Size (The TRUE total memory used by the container)
+    memoryWatchdog = setInterval(() => { 
         const memoryMB = process.memoryUsage().rss / 1024 / 1024;
         
         if (memoryMB > 350) {
-            // If we hit 350MB, clear the timer, log out cleanly, and trigger an instant Render restart
+            console.log(`[SYS] Memory hit ${memoryMB.toFixed(1)}MB. Gracefully restarting bot without killing the Render server...`);
+            
             clearInterval(memoryWatchdog);
             if (bot) bot.quit('Tactical Reboot: Clearing RAM');
             
-            setTimeout(() => {
-                process.exit(0); // This tells Render to instantly reboot the script from 0MB!
-            }, 1000);
+            // I REMOVED process.exit(0) HERE. 
+            // Now, only the bot disconnects. The Express server stays alive 24/7 so Render doesn't freak out.
+            // Your bot.on('end') event will automatically wipe the RAM and reconnect in 30 seconds!
         }
-    }, 60000); // Checks the RAM every 60 seconds
+    }, 60000);
 
         // --- THE FIX: 15 Second Grace Period ---
         emergencyLogoutEnabled = false;
