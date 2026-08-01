@@ -276,7 +276,16 @@ async function fidgetInventory() {
     });
 
     bot.on('kicked', (reason) => {
-        console.log(`[!] Kicked from server. Reason: ${reason}`);
+        // 1. Move to the next bot in our roster array
+        currentBotIndex++;
+        
+        // 2. If we reach the end of the list, loop back to the first bot
+        if (currentBotIndex >= BOT_ROSTER.length) {
+            currentBotIndex = 0;
+        }
+        
+        // Note: The console.log is silenced, but if you ever unmute it, 
+        // you'd see it switching accounts right here!
     });
 
     bot.on('end', () => {
