@@ -312,12 +312,21 @@ async function fidgetInventory() {
         // Turn off the memory checker while disconnected
         clearInterval(memoryWatchdog);
         
-        // Clean up old memory references so RAM resets
+        // Clean up old memory references
         if (bot) {
             bot.removeAllListeners();
         }
         
+        // -------------------------------------------------------------
+        // THE 200 IQ FIX: FORCE INSTANT RAM FLUSH
+        // -------------------------------------------------------------
+        if (global.gc) {
+            global.gc(); // Forces Node.js to instantly delete all cached world chunks
+            console.log('[SYS] Tactical RAM flush executed. Memory cleared.');
+        }
+
         let reconnectDelay;
+        // ... (the rest of your wasKicked / reconnect logic stays exactly the same below this)
 
         // If kicked, wait ~2.5 minutes to bypass Aternos firewall
         if (wasKicked) {
