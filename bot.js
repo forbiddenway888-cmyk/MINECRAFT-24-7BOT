@@ -58,10 +58,13 @@ function getGaussianRandom(mean, standardDeviation) {
 function initBot() {
     console.log(`[BOT] Attempting connection to ${SERVER_IP}:${SERVER_PORT}...`);
 
+    let memoryWatchdog; // Defined here so all events can see it
+    let wasKicked = false; // Flag for the Lay Low protocol
+
     const bot = mineflayer.createBot({
         host: SERVER_IP,
         port: SERVER_PORT,
-        username: BOT_ROSTER[currentBotIndex], // <--- CHANGED THIS LINE
+        username: BOT_ROSTER[currentBotIndex], 
         version: '1.21.1',
         viewDistance: 2,         
         hideErrors: true         
@@ -195,6 +198,24 @@ async function fidgetInventory() {
         defaultMove.allow1by1towers = false; 
         bot.pathfinder.setMovements(defaultMove);
 
+// -------------------------------------------------------------
+    // TACTICAL MEMORY WATCHDOG
+    // -------------------------------------------------------------
+    memoryWatchdog = setInterval(() => { // <--- Removed "const" here
+        // .rss = Resident Set Size (The TRUE total memory used by the container)
+        const memoryMB = process.memoryUsage().rss / 1024 / 1024;
+        
+        if (memoryMB > 350) {
+            // If we hit 350MB, clear the timer, log out cleanly, and trigger an instant Render restart
+            clearInterval(memoryWatchdog);
+            if (bot) bot.quit('Tactical Reboot: Clearing RAM');
+            
+            setTimeout(() => {
+                process.exit(0); // This tells Render to instantly reboot the script from 0MB!
+            }, 1000);
+        }
+    }, 60000); // Checks the RAM every 60 seconds
+
         // --- THE FIX: 15 Second Grace Period ---
         emergencyLogoutEnabled = false;
         console.log('[SYS] Spawn grace period active. Bot will not emergency-logout for 15 seconds so it can eat/heal.');
@@ -284,19 +305,32 @@ async function fidgetInventory() {
             currentBotIndex = 0;
         }
         
-        // Note: The console.log is silenced, but if you ever unmute it, 
-        // you'd see it switching accounts right here!
+        wasKicked = true; // Trigger the Lay Low protocol!
     });
 
     bot.on('end', () => {
-        // Clean up old memory references so RAM resets on reconnect
+        // Turn off the memory checker while disconnected
+        clearInterval(memoryWatchdog);
+        
+        // Clean up old memory references so RAM resets
         if (bot) {
             bot.removeAllListeners();
         }
         
-        const reconnectDelay = getGaussianRandom(30000, 5000);
+        let reconnectDelay;
+
+        // If kicked, wait ~2.5 minutes to bypass Aternos firewall
+        if (wasKicked) {
+            reconnectDelay = getGaussianRandom(150000, 30000); 
+            if (reconnectDelay > 240000) reconnectDelay = 230000; 
+            wasKicked = false; 
+        } else {
+            // Normal server restart / crash - wait 30 seconds
+            reconnectDelay = getGaussianRandom(30000, 5000); 
+        }
+        
         setTimeout(initBot, reconnectDelay);
-    });
+    }); // <--- This closing bracket was missing!
 
     // -------------------------------------------------------------
     // Humanized Conversational Chat Engine
