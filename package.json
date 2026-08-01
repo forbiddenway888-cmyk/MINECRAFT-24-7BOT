@@ -4,7 +4,7 @@
   "description": "Optimized Node.js keep-alive bot",
   "main": "bot.js",
   "scripts": {
-    "start": "node --max-old-space-size=380 bot.js"
+    "start": "node --expose-gc --max-old-space-size=350 bot.js"
   },
   "dependencies": {
     "express": "^4.18.2",
