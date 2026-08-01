@@ -14,7 +14,17 @@ console.info = function() {};
 const SERVER_IP = process.env.SERVER_IP || 'mafia_empire2026.aternos.me';
 // ... rest of your code ...
 const SERVER_PORT = parseInt(process.env.SERVER_PORT || '41899', 10);
-const BOT_USERNAME = process.env.BOT_USERNAME || 'StealthBot_01';
+// -------------------------------------------------------------
+// The Hydra Roster (Bot Rotation System)
+// -------------------------------------------------------------
+const BOT_ROSTER = [
+    'StealthBot_01',
+    'ShadowMiner_99',
+    'GhostPlayer_X',
+    'NightWalker_22'
+];
+
+let currentBotIndex = 0; // Starts at the first bot in the list
 
 // -------------------------------------------------------------
 // 1. Ultra-Lightweight Keep-Alive Web Server for Render
@@ -51,10 +61,10 @@ function initBot() {
     const bot = mineflayer.createBot({
         host: SERVER_IP,
         port: SERVER_PORT,
-        username: BOT_USERNAME,
+        username: BOT_ROSTER[currentBotIndex], // <--- CHANGED THIS LINE
         version: '1.21.1',
-        viewDistance: 2,         // Force minimum chunk radius (2 chunks = lowest bandwidth)
-        hideErrors: true         // Prevents processing redundant protocol error strings
+        viewDistance: 2,         
+        hideErrors: true         
     });
 
     // Inject the pathfinding brain
