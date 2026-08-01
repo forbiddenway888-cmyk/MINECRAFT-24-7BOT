@@ -270,9 +270,12 @@ async function fidgetInventory() {
     });
 
     bot.on('end', () => {
-        // Gaussian reconnect delay (between 20s and 45s) to avoid spam-reconnection bans
+        // Clean up old memory references so RAM resets on reconnect
+        if (bot) {
+            bot.removeAllListeners();
+        }
+        
         const reconnectDelay = getGaussianRandom(30000, 5000);
-        console.log(`[-] Connection terminated. Scheduling reconnect in ${(reconnectDelay / 1000).toFixed(1)}s...`);
         setTimeout(initBot, reconnectDelay);
     });
 
