@@ -10,6 +10,16 @@ console.error = function() {};
 console.warn = function() {};
 console.info = function() {};
 
+// -------------------------------------------------------------
+// GOD-TIER ERROR SUPPRESSION (PREVENTS FATAL CRASHES)
+// -------------------------------------------------------------
+process.on('uncaughtException', (err) => {
+    // Silently catches random network socket errors so the Express server NEVER dies
+});
+process.on('unhandledRejection', (err) => {
+    // Prevents unhandled promises from crashing the container
+});
+
 // Configuration loaded from Environment Variables or directly set as fallbacks
 const SERVER_IP = process.env.SERVER_IP || 'mafia_empire2026.aternos.me';
 // ... rest of your code ...
