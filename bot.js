@@ -3,22 +3,35 @@ const mineflayer = require('mineflayer');
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
 
 // -------------------------------------------------------------
-// SILENCE ALL LOGS TO SAVE RENDER CPU/MEMORY
+// SILENCE LOGS (BUT KEEP ERRORS ALIVE FOR DEBUGGING)
 // -------------------------------------------------------------
 console.log = function() {};
-console.error = function() {};
 console.warn = function() {};
 console.info = function() {};
+// Notice I removed console.error = function(){}. We NEED to see fatal crashes!
+
+let bot = null; // Global so the error handler can reach it
+let spawnWatchdog; 
+let reconnectTimer;
 
 // -------------------------------------------------------------
-// GOD-TIER ERROR SUPPRESSION (PREVENTS FATAL CRASHES)
+// ANTI-ZOMBIE ERROR RESCUE
 // -------------------------------------------------------------
 process.on('uncaughtException', (err) => {
-    // Silently catches random network socket errors so the Express server NEVER dies
+    console.error(`[CRITICAL] Zombie prevented! Network Error: ${err.message}`);
+    
+    // Violently kill the frozen bot
+    if (bot) {
+        try { bot.quit(); } catch(e) {}
+        bot = null;
+    }
+    if (global.gc) global.gc(); // Flush RAM
+    
+    // Force a reboot in 15 seconds to escape the zombie state
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(initBot, 15000); 
 });
-process.on('unhandledRejection', (err) => {
-    // Prevents unhandled promises from crashing the container
-});
+process.on('unhandledRejection', (err) => {}); // Keeps Express alive
 
 // Configuration loaded from Environment Variables or directly set as fallbacks
 const SERVER_IP = process.env.SERVER_IP || 'mafia_empire2026.aternos.me';
@@ -66,13 +79,22 @@ function getGaussianRandom(mean, standardDeviation) {
 // 3. Core Mineflayer Bot Instantiation
 // -------------------------------------------------------------
 function initBot() {
-    console.log(`[BOT] Attempting connection to ${SERVER_IP}:${SERVER_PORT}...`);
+    console.error(`[BOT] Attempting connection to ${SERVER_IP}:${SERVER_PORT}...`);
 
     let memoryWatchdog; 
     let wasKicked = false; 
 
-    // THE FIX: Changed 'const' to 'let' right here
-    let bot = mineflayer.createBot({
+    // -------------------------------------------------------------
+    // ATERNOS VOID WATCHDOG (LOGIN HANG DETECTOR)
+    // -------------------------------------------------------------
+    clearTimeout(spawnWatchdog);
+    spawnWatchdog = setTimeout(() => {
+        console.error('[SYS] Aternos login hang detected (60s). Rebooting...');
+        if (bot) bot.quit('Login Timeout');
+    }, 60000); 
+
+    // THE FIX: Removed 'let' below so it uses the global bot variable
+    bot = mineflayer.createBot({
         host: SERVER_IP,
         port: SERVER_PORT,
         username: BOT_ROSTER[currentBotIndex], 
@@ -202,9 +224,12 @@ async function fidgetInventory() {
     let emergencyLogoutEnabled = false; // Flag to prevent infinite join/leave loops
 
     bot.on('spawn', () => {
-        console.log('[+] Bot spawned into the world. Activating stealth engine...');
-        
-        const defaultMove = new Movements(bot);
+    // THE FIX: We spawned successfully! Turn off the Void Watchdog.
+    clearTimeout(spawnWatchdog); 
+    
+    console.error('[+] Bot spawned into the world. Activating stealth engine...');
+    
+    const defaultMove = new Movements(bot);
         defaultMove.canDig = false; 
         defaultMove.allow1by1towers = false; 
         bot.pathfinder.setMovements(defaultMove);
@@ -316,42 +341,33 @@ memoryWatchdog = setInterval(() => {
     });
 
     bot.on('end', () => {
-    // Turn off the memory checker while disconnected
     clearInterval(memoryWatchdog);
+    clearTimeout(spawnWatchdog); // Ensure login timer stops
     
-    // Clean up old memory references
     if (bot) {
         bot.removeAllListeners();
-        // THE FIX: Stop pathfinder and completely destroy the bot object
         if (bot.pathfinder) bot.pathfinder.setGoal(null); 
         bot = null; 
     }
     
-    // -------------------------------------------------------------
-    // FORCE INSTANT RAM FLUSH
-    // -------------------------------------------------------------
     if (global.gc) {
         global.gc(); 
-        console.log('[SYS] Tactical RAM flush executed. Memory cleared.');
     }
 
+    // Use the global timer to prevent duplicate bots
+    clearTimeout(reconnectTimer);
+    
     let reconnectDelay;
-    // ... (the rest of your wasKicked logic stays exactly the same)
-        // ... (the rest of your wasKicked / reconnect logic stays exactly the same below this)
-
-        // If kicked, wait ~2.5 minutes to bypass Aternos firewall
-        if (wasKicked) {
-            reconnectDelay = getGaussianRandom(150000, 30000); 
-            if (reconnectDelay > 240000) reconnectDelay = 230000; 
-            wasKicked = false; 
-        } else {
-            // Normal server restart / crash - wait 30 seconds
-            reconnectDelay = getGaussianRandom(30000, 5000); 
-        }
-        
-        setTimeout(initBot, reconnectDelay);
-    }); // <--- This closing bracket was missing!
-
+    if (wasKicked) {
+        reconnectDelay = getGaussianRandom(150000, 30000); 
+        if (reconnectDelay > 240000) reconnectDelay = 230000; 
+        wasKicked = false; 
+    } else {
+        reconnectDelay = getGaussianRandom(30000, 5000); 
+    }
+    
+    reconnectTimer = setTimeout(initBot, reconnectDelay);
+});
     // -------------------------------------------------------------
     // Humanized Conversational Chat Engine
     // -------------------------------------------------------------
