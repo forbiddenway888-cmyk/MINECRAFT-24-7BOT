@@ -68,10 +68,11 @@ function getGaussianRandom(mean, standardDeviation) {
 function initBot() {
     console.log(`[BOT] Attempting connection to ${SERVER_IP}:${SERVER_PORT}...`);
 
-    let memoryWatchdog; // Defined here so all events can see it
-    let wasKicked = false; // Flag for the Lay Low protocol
+    let memoryWatchdog; 
+    let wasKicked = false; 
 
-    const bot = mineflayer.createBot({
+    // THE FIX: Changed 'const' to 'let' right here
+    let bot = mineflayer.createBot({
         host: SERVER_IP,
         port: SERVER_PORT,
         username: BOT_ROSTER[currentBotIndex], 
@@ -209,22 +210,18 @@ async function fidgetInventory() {
         bot.pathfinder.setMovements(defaultMove);
 
 // -------------------------------------------------------------
-    // TACTICAL MEMORY WATCHDOG (FIXED)
-    // -------------------------------------------------------------
-    memoryWatchdog = setInterval(() => { 
-        const memoryMB = process.memoryUsage().rss / 1024 / 1024;
+// TACTICAL MEMORY WATCHDOG (SUPERCHARGED)
+// -------------------------------------------------------------
+memoryWatchdog = setInterval(() => { 
+    const memoryMB = process.memoryUsage().rss / 1024 / 1024;
+    
+    if (memoryMB > 320) {
+        console.log(`[SYS] Memory hit ${memoryMB.toFixed(1)}MB. Ejecting before crash...`);
         
-        if (memoryMB > 350) {
-            console.log(`[SYS] Memory hit ${memoryMB.toFixed(1)}MB. Gracefully restarting bot without killing the Render server...`);
-            
-            clearInterval(memoryWatchdog);
-            if (bot) bot.quit('Tactical Reboot: Clearing RAM');
-            
-            // I REMOVED process.exit(0) HERE. 
-            // Now, only the bot disconnects. The Express server stays alive 24/7 so Render doesn't freak out.
-            // Your bot.on('end') event will automatically wipe the RAM and reconnect in 30 seconds!
-        }
-    }, 60000);
+        clearInterval(memoryWatchdog);
+        if (bot) bot.quit('Tactical Reboot: Clearing RAM');
+    }
+}, 10000); // <--- Now checks every 10 seconds!
 
         // --- THE FIX: 15 Second Grace Period ---
         emergencyLogoutEnabled = false;
@@ -319,23 +316,27 @@ async function fidgetInventory() {
     });
 
     bot.on('end', () => {
-        // Turn off the memory checker while disconnected
-        clearInterval(memoryWatchdog);
-        
-        // Clean up old memory references
-        if (bot) {
-            bot.removeAllListeners();
-        }
-        
-        // -------------------------------------------------------------
-        // THE 200 IQ FIX: FORCE INSTANT RAM FLUSH
-        // -------------------------------------------------------------
-        if (global.gc) {
-            global.gc(); // Forces Node.js to instantly delete all cached world chunks
-            console.log('[SYS] Tactical RAM flush executed. Memory cleared.');
-        }
+    // Turn off the memory checker while disconnected
+    clearInterval(memoryWatchdog);
+    
+    // Clean up old memory references
+    if (bot) {
+        bot.removeAllListeners();
+        // THE FIX: Stop pathfinder and completely destroy the bot object
+        if (bot.pathfinder) bot.pathfinder.setGoal(null); 
+        bot = null; 
+    }
+    
+    // -------------------------------------------------------------
+    // FORCE INSTANT RAM FLUSH
+    // -------------------------------------------------------------
+    if (global.gc) {
+        global.gc(); 
+        console.log('[SYS] Tactical RAM flush executed. Memory cleared.');
+    }
 
-        let reconnectDelay;
+    let reconnectDelay;
+    // ... (the rest of your wasKicked logic stays exactly the same)
         // ... (the rest of your wasKicked / reconnect logic stays exactly the same below this)
 
         // If kicked, wait ~2.5 minutes to bypass Aternos firewall
