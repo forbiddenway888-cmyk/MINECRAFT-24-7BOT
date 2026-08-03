@@ -15,23 +15,23 @@ let spawnWatchdog;
 let reconnectTimer;
 
 // -------------------------------------------------------------
-// ANTI-ZOMBIE ERROR RESCUE
+// ANTI-ZOMBIE ERROR RESCUE (UPGRADED)
 // -------------------------------------------------------------
-process.on('uncaughtException', (err) => {
-    console.error(`[CRITICAL] Zombie prevented! Network Error: ${err.message}`);
+function rescueZombie(reason, err) {
+    console.error(`[CRITICAL] Zombie prevented! ${reason}: ${err.message || err}`);
     
-    // Violently kill the frozen bot
     if (bot) {
         try { bot.quit(); } catch(e) {}
         bot = null;
     }
-    if (global.gc) global.gc(); // Flush RAM
+    if (global.gc) global.gc(); 
     
-    // Force a reboot in 15 seconds to escape the zombie state
     clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(initBot, 15000); 
-});
-process.on('unhandledRejection', (err) => {}); // Keeps Express alive
+}
+
+process.on('uncaughtException', (err) => rescueZombie('Sync Error', err));
+process.on('unhandledRejection', (err) => rescueZombie('Async Error', err));
 
 // Configuration loaded from Environment Variables or directly set as fallbacks
 const SERVER_IP = process.env.SERVER_IP || 'mafia_empire2026.aternos.me';
